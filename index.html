@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f4f2">
+<title>Опись имущества — оценка переезда</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --ink: #14181f;
+    --ink-soft: #5a6472;
+    --paper: #f3f4f2;
+    --card: #ffffff;
+    --line: #e2e4e0;
+    --accent: #ff5a1f;
+    --ok: #0f7b4d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100vh;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .header { padding: 20px 16px 12px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 600;
+  }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 0; }
+
+  .tabs { display: flex; gap: 8px; padding: 0 16px 12px; }
+  .tab {
+    flex: 1; padding: 10px 0; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); font: 600 14px system-ui, sans-serif;
+    color: var(--ink-soft); cursor: pointer;
+  }
+  .tab.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .body { padding: 4px 16px 150px; }
+
+  .section-title {
+    font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-soft); margin: 18px 4px 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .row.counted { border-color: var(--ink); }
+  .name { flex: 1; font-size: 15px; font-weight: 500; line-height: 1.25; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--paper); font-size: 22px; font-weight: 600; color: var(--ink);
+    cursor: pointer; flex-shrink: 0; line-height: 1; touch-action: manipulation;
+  }
+  .btn:active { background: var(--line); }
+  .qty {
+    width: 56px; height: 44px; border: 1px solid var(--line); border-radius: 10px;
+    text-align: center; font: 600 17px ui-monospace, "Roboto Mono", monospace;
+    color: var(--ink); background: #fff; -moz-appearance: textfield;
+  }
+  .qty::-webkit-outer-spin-button, .qty::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .qty.zero { color: #b3b9c0; }
+
+  .hint { font-size: 13px; color: var(--ink-soft); margin: 0 4px 8px; line-height: 1.4; }
+  .addrow { display: flex; gap: 8px; margin: 4px 0 6px; }
+  .addinput {
+    flex: 1; height: 44px; border: 1px dashed var(--ink-soft); border-radius: 10px;
+    padding: 0 12px; font: 500 15px system-ui, sans-serif;
+    background: transparent; color: var(--ink);
+  }
+  .addbtn {
+    height: 44px; padding: 0 16px; border-radius: 10px; border: none;
+    background: var(--ink); color: #fff; font: 600 14px system-ui, sans-serif; cursor: pointer;
+  }
+
+  .footer {
+    position: fixed; bottom: 0; left: 0; right: 0; max-width: 520px; margin: 0 auto;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--paper) 75%, rgba(243,244,242,0));
+  }
+  .total {
+    display: flex; justify-content: space-between;
+    font: 600 13px ui-monospace, monospace; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--ink-soft); padding: 0 4px 8px;
+  }
+  .total b { color: var(--ink); font-size: 15px; }
+  .confirm {
+    width: 100%; height: 54px; border: none; border-radius: 14px;
+    background: var(--accent); color: #fff; font: 700 17px system-ui, sans-serif;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(255,90,31,.35);
+  }
+  .confirm:disabled { background: #c9cdc9; box-shadow: none; }
+
+  .toast {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--ok); color: #fff; font: 600 14px system-ui, sans-serif;
+    padding: 10px 18px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.2);
+    z-index: 50; white-space: nowrap; display: none;
+  }
+
+  .save {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .savehead {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 14px; background: none; border: none; cursor: pointer;
+    text-align: left; font-family: inherit;
+  }
+  .savedate { font: 600 15px ui-monospace, monospace; color: var(--ink); }
+  .savemeta { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+  .chev { color: var(--ink-soft); font-size: 13px; flex-shrink: 0; }
+  .savelist { border-top: 1px solid var(--line); padding: 8px 14px 12px; display: none; }
+  .save.open .savelist { display: block; }
+  .savesection {
+    font: 700 11px ui-monospace, monospace; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-soft); margin: 10px 0 2px;
+  }
+  .saveitem {
+    display: flex; justify-content: space-between; padding: 6px 0;
+    font-size: 14px; border-bottom: 1px dashed var(--line);
+  }
+  .saveitem:last-of-type { border-bottom: none; }
+  .saveqty { font: 600 14px ui-monospace, monospace; }
+  .saveactions { display: flex; gap: 8px; margin-top: 12px; }
+  .copybtn, .delbtn {
+    flex: 1; height: 38px; border-radius: 9px;
+    font: 600 13px system-ui, sans-serif; cursor: pointer;
+  }
+  .copybtn { border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+  .delbtn { border: 1px solid #e5b9ad; background: #fdf2ef; color: #b3401f; }
+  .empty {
+    text-align: center; color: var(--ink-soft); font-size: 14px;
+    padding: 48px 20px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="toast" id="toast" role="status"></div>
+
+  <header class="header">
+    <div class="eyebrow">Оценка переезда</div>
+    <h1>Опись имущества</h1>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" id="tabCount">Подсчёт</button>
+    <button class="tab" id="tabSaved">Сохранённые</button>
+  </nav>
+
+  <main class="body" id="viewCount"></main>
+  <main class="body" id="viewSaved" style="display:none"></main>
+
+  <footer class="footer" id="footer">
+    <div class="total">
+      <span>Позиций: <b id="totPos">0</b></span>
+      <span>Всего предметов: <b id="totItems">0</b></span>
+    </div>
+    <button class="confirm" id="confirmBtn" disabled>Подтвердить и сохранить</button>
+  </footer>
+
+<script>
+"use strict";
+
+// ---------- данные ----------
+var SECTIONS = [
+  { id: "office", title: "Офис", items: [
+    "Столы","Кресла","Стулья","Шкафы","Тумбочки","Комод офисный",
+    "Стеллажи","Стеллажи складские","Сейфы","Диваны","Компьютеры","Мониторы",
+    "Ноутбуки","Принтеры / МФУ","Телевизоры","Доски / флипчарты","Коробки"
+  ]},
+  { id: "kitchen", title: "Кухня", items: [
+    "Холодильники","Микроволновки","Кулеры","Чайники / кофемашины",
+    "Кухонные столы","Кухонные шкафы","Стулья","Коробки с посудой"
+  ]},
+  { id: "boss", title: "Кабинет руководителя", items: [
+    "Стол руководителя","Кресло руководителя","Приставная тумба",
+    "Шкафы","Стеллажи","Диваны","Сейфы","Коробки"
+  ]},
+  { id: "other", title: "Другое", items: [] }
+];
+
+var STORAGE_KEY = "move-estimates-v2";
+var qty = {};          // key -> число
+var saves = [];        // сохранённые описи
+var toastTimer = null;
+
+function keyOf(sid, name) { return sid + "::" + name; }
+
+function pad(n) { return String(n).padStart(2, "0"); }
+function fmtDate(iso) {
+  var d = new Date(iso);
+  return pad(d.getDate()) + "." + pad(d.getMonth()+1) + "." + d.getFullYear() +
+         " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function loadSaves() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    saves = raw ? JSON.parse(raw) : [];
+  } catch (e) { saves = []; }
+}
+function persistSaves() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saves));
+    return true;
+  } catch (e) { return false; }
+}
+
+function showToast(msg) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.style.display = "none"; }, 2200);
+}
+
+// ---------- вкладка «Подсчёт» ----------
+function renderCount() {
+  var root = document.getElementById("viewCount");
+  root.innerHTML = "";
+  SECTIONS.forEach(function(s) {
+    var h = document.createElement("div");
+    h.className = "section-title";
+    h.textContent = s.title;
+    root.appendChild(h);
+
+    if (s.id === "other") {
+      var hint = document.createElement("p");
+      hint.className = "hint";
+      hint.textContent = "Впишите предмет, которого нет в списках, — он добавится сюда со счётчиком.";
+      root.appendChild(hint);
+
+      var addrow = document.createElement("div");
+      addrow.className = "addrow";
+      var input = document.createElement("input");
+      input.className = "addinput";
+      input.placeholder = "Например: аквариум…";
+      input.id = "otherInput";
+      var addbtn = document.createElement("button");
+      addbtn.className = "addbtn";
+      addbtn.textContent = "Добавить";
+      addbtn.onclick = addOtherItem;
+      input.addEventListener("keydown", function(e){ if (e.key === "Enter") addOtherItem(); });
+      addrow.appendChild(input);
+      addrow.appendChild(addbtn);
+      root.appendChild(addrow);
+    }
+
+    s.items.forEach(function(name) {
+      root.appendChild(makeRow(s.id, name));
+    });
+  });
+  updateTotals();
+}
+
+function makeRow(sid, name) {
+  var k = keyOf(sid, name);
+  if (!(k in qty)) qty[k] = 0;
+
+  var row = document.createElement("div");
+  row.className = "row";
+  row.dataset.key = k;
+
+  var nm = document.createElement("span");
+  nm.className = "name";
+  nm.textContent = name;
+
+  var minus = document.createElement("button");
+  minus.className = "btn";
+  minus.textContent = "−";
+  minus.setAttribute("aria-label", "Убавить: " + name);
+
+  var input = document.createElement("input");
+  input.className = "qty zero";
+  input.type = "number";
+  input.inputMode = "numeric";
+  input.min = "0";
+  input.value = qty[k];
+  input.setAttribute("aria-label", "Количество: " + name);
+
+  var plus = document.createElement("button");
+  plus.className = "btn";
+  plus.textContent = "+";
+  plus.setAttribute("aria-label", "Прибавить: " + name);
+
+  function apply(val) {
+    var n = Math.max(0, Math.min(9999, Math.floor(Number(val) || 0)));
+    qty[k] = n;
+    input.value = n;
+    input.classList.toggle("zero", n === 0);
+    row.classList.toggle("counted", n > 0);
+    updateTotals();
+  }
+  minus.onclick = function(){ apply(qty[k] - 1); };
+  plus.onclick = function(){ apply(qty[k] + 1); };
+  input.addEventListener("focus", function(){ input.select(); });
+  input.addEventListener("input", function(){ apply(input.value); });
+
+  row.appendChild(nm); row.appendChild(minus); row.appendChild(input); row.appendChild(plus);
+  return row;
+}
+
+function addOtherItem() {
+  var input = document.getElementById("otherInput");
+  var n = input.value.trim();
+  if (!n) return;
+  var other = SECTIONS[SECTIONS.length - 1];
+  var exists = other.items.some(function(x){ return x.toLowerCase() === n.toLowerCase(); });
+  if (exists) { showToast("Такой предмет уже есть"); return; }
+  other.items.push(n);
+  qty[keyOf("other", n)] = 1;
+  var row = makeRow("other", n);
+  row.classList.add("counted");
+  row.querySelector(".qty").classList.remove("zero");
+  document.getElementById("viewCount").appendChild(row);
+  input.value = "";
+  updateTotals();
+  row.scrollIntoView({ block: "center" });
+}
+
+function updateTotals() {
+  var items = 0, pos = 0;
+  Object.keys(qty).forEach(function(k) {
+    if (qty[k] > 0) { items += qty[k]; pos += 1; }
+  });
+  document.getElementById("totItems").textContent = items;
+  document.getElementById("totPos").textContent = pos;
+  document.getElementById("confirmBtn").disabled = (items === 0);
+}
+
+// ---------- сохранение ----------
+function confirmSave() {
+  var total = 0;
+  var secs = SECTIONS.map(function(s) {
+    return {
+      title: s.title,
+      items: s.items
+        .filter(function(n){ return (qty[keyOf(s.id, n)] || 0) > 0; })
+        .map(function(n){
+          var c = qty[keyOf(s.id, n)];
+          total += c;
+          return { name: n, count: c };
+        })
+    };
+  }).filter(function(s){ return s.items.length > 0; });
+
+  if (total === 0) return;
+
+  saves.unshift({ id: Date.now(), date: new Date().toISOString(), sections: secs, total: total });
+  if (!persistSaves()) { saves.shift(); showToast("Не удалось сохранить"); return; }
+
+  Object.keys(qty).forEach(function(k){ qty[k] = 0; });
+  renderCount();
+  showToast("Список сохранён ✓");
+  updateSavedBadge();
+}
+
+// ---------- вкладка «Сохранённые» ----------
+function saveToText(s) {
+  var lines = ["Опись имущества — " + fmtDate(s.date), ""];
+  s.sections.forEach(function(sec) {
+    lines.push(sec.title.toUpperCase());
+    sec.items.forEach(function(it){ lines.push("  " + it.name + " — " + it.count); });
+    lines.push("");
+  });
+  lines.push("Всего предметов: " + s.total);
+  return lines.join("\n");
+}
+
+function renderSaved() {
+  var root = document.getElementById("viewSaved");
+  root.innerHTML = "";
+  if (saves.length === 0) {
+    var e = document.createElement("div");
+    e.className = "empty";
+    e.innerHTML = "Пока нет сохранённых списков.<br>Посчитайте предметы на вкладке «Подсчёт» и нажмите «Подтвердить и сохранить».";
+    root.appendChild(e);
+    return;
+  }
+  saves.forEach(function(s) {
+    var card = document.createElement("div");
+    card.className = "save";
+
+    var head = document.createElement("button");
+    head.className = "savehead";
+    head.innerHTML =
+      '<span><span class="savedate">' + fmtDate(s.date) + '</span>' +
+      '<div class="savemeta">' + s.total + ' предметов</div></span>' +
+      '<span class="chev">▼</span>';
+    head.onclick = function() {
+      var open = card.classList.toggle("open");
+      head.querySelector(".chev").textContent = open ? "▲" : "▼";
+    };
+    card.appendChild(head);
+
+    var list = document.createElement("div");
+    list.className = "savelist";
+    s.sections.forEach(function(sec) {
+      var st = document.createElement("div");
+      st.className = "savesection";
+      st.textContent = sec.title;
+      list.appendChild(st);
+      sec.items.forEach(function(it) {
+        var li = document.createElement("div");
+        li.className = "saveitem";
+        var nm = document.createElement("span"); nm.textContent = it.name;
+        var q = document.createElement("span"); q.className = "saveqty"; q.textContent = it.count;
+        li.appendChild(nm); li.appendChild(q);
+        list.appendChild(li);
+      });
+    });
+
+    var actions = document.createElement("div");
+    actions.className = "saveactions";
+
+    var copy = document.createElement("button");
+    copy.className = "copybtn";
+    copy.textContent = "Скопировать текстом";
+    copy.onclick = function() {
+      var text = saveToText(s);
+      if (navigator.share) {
+        navigator.share({ text: text }).catch(function(){});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(
+          function(){ showToast("Скопировано"); },
+          function(){ showToast("Не удалось скопировать"); }
+        );
+      }
+    };
+
+    var del = document.createElement("button");
+    del.className = "delbtn";
+    del.textContent = "Удалить";
+    del.onclick = function() {
+      saves = saves.filter(function(x){ return x.id !== s.id; });
+      persistSaves();
+      renderSaved();
+      updateSavedBadge();
+      showToast("Список удалён");
+    };
+
+    actions.appendChild(copy);
+    actions.appendChild(del);
+    list.appendChild(actions);
+    card.appendChild(list);
+    root.appendChild(card);
+  });
+}
+
+// ---------- вкладки ----------
+function updateSavedBadge() {
+  document.getElementById("tabSaved").textContent =
+    "Сохранённые" + (saves.length ? " (" + saves.length + ")" : "");
+}
+function switchTab(which) {
+  var count = which === "count";
+  document.getElementById("tabCount").classList.toggle("active", count);
+  document.getElementById("tabSaved").classList.toggle("active", !count);
+  document.getElementById("viewCount").style.display = count ? "" : "none";
+  document.getElementById("viewSaved").style.display = count ? "none" : "";
+  document.getElementById("footer").style.display = count ? "" : "none";
+  if (!count) renderSaved();
+}
+
+document.getElementById("tabCount").onclick = function(){ switchTab("count"); };
+document.getElementById("tabSaved").onclick = function(){ switchTab("saved"); };
+document.getElementById("confirmBtn").onclick = confirmSave;
+
+// ---------- запуск ----------
+loadSaves();
+updateSavedBadge();
+renderCount();
+
+// офлайн-режим (работает только при открытии по https с сервера)
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
+</script>
+</body>
+</html>
